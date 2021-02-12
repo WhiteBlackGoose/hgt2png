@@ -151,13 +151,34 @@ namespace hgt2png
             Console.WriteLine(s);
         }
 
+        static void LogInplace(string s)
+        {
+            Console.Write(s);
+        }
+
+        static string[] GatherMissingArgs()
+        {
+            Log(@"Welcome to hgt2png!
+Please, input the path to the directory, storing your .hgt files (e. g. N44E033.hgt)");
+            LogInplace("Path: ");
+            var mPath = Console.ReadLine();
+            Log("Input the destination path and the prefix (e. g. D:/res), or press enter to skip");
+            LogInplace("Path prefix: ");
+            var dstPath = Console.ReadLine();
+            if (dstPath == "")
+                return new[] { mPath };
+            Log("Input maxbyte, or press enter to skip");
+            LogInplace("maxbyte: ");
+            var maxByte = Console.ReadLine();
+            if (maxByte == "")
+                return new[] { mPath, dstPath };
+            return new[] { mPath, dstPath, "-maxbyte", maxByte };
+        }
+
         static void Main(string[] args)
         {
-            if (args.Length < 1)
-            {
-                Console.WriteLine("Restart the program with valid params");
-                return;
-            }
+            if (args.Length == 0)
+                args = GatherMissingArgs();
 
             if (args[0].EndsWith(".exe") || args[0].EndsWith(".csproj"))
                 args = args[1..];
