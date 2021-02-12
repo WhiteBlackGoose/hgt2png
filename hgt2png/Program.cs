@@ -137,12 +137,12 @@ namespace hgt2png
                     yield return arr[x, y];
         }
 
-        public static void CopyFragTo(Bitmap dstBmp, Bitmap srcBmp, int xFrom, int yFrom)
+        public static void CopyFragTo<T>(Bitmap dstBmp, Bitmap srcBmp, int xFrom, int yFrom) where T : unmanaged
         {
-            using var dst = new SmartBmp(dstBmp, format: dstBmp.PixelFormat);
-            using var src = new SmartBmp(srcBmp, format: srcBmp.PixelFormat);
-            for (int x = 0; x < src.Width; x++)
-                for (int y = 0; y < src.Height; y++)
+            using var dst = new BmpRaw<T>(dstBmp, format: dstBmp.PixelFormat);
+            using var src = new BmpRaw<T>(srcBmp, format: srcBmp.PixelFormat);
+            for (int x = 0; x < srcBmp.Width; x++)
+                for (int y = 0; y < srcBmp.Height; y++)
                     dst[x + xFrom, y + yFrom] = src[x, y];
         }
 
@@ -235,8 +235,8 @@ namespace hgt2png
                         var bytesFor64 = frag.Select(c => (ushort)(c * 256 / (maxByte + 1))).ToArray();
                         var frag32 = Hgt2Png(bytesFor32, size, PixelFormat.Format32bppArgb, byte.MaxValue);
                         var frag64 = Hgt2Png(bytesFor64, size, PixelFormat.Format64bppArgb, ushort.MaxValue);
-                        CopyFragTo(res32, frag32, (maxY - y) * size, (maxX - x) * size);
-                        CopyFragTo(res64, frag64, (maxY - y) * size, (maxX - x) * size);
+                        CopyFragTo<(byte, byte, byte, byte)>(res32, frag32, (maxY - y) * size, (maxX - x) * size);
+                        CopyFragTo<(ushort, ushort, ushort, ushort)>(res64, frag64, (maxY - y) * size, (maxX - x) * size);
                         Log($"Processed {x} {y}");
                     }
 

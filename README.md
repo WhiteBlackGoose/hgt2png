@@ -25,9 +25,13 @@ It will gather all the files with the appropriate naming (e. g. N44E033):
 
 <img src="./samples/screenshot.png">
 
-and pack into one image:
+and pack into one 32-bit image:
 
-<img src="./samples/resN44E036-N46E032_32bit.png">
+<img src="./samples/hgt/resN44E036-N46E032_32bit.png" width="200px" width="200px">
+
+as well as a more precise 64-bit image:
+
+<img src="./samples/hgt/resN44E036-N46E032_64bit.png" width="200px" width="200px">
 
 You can specify the path and prefix
 
