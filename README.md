@@ -34,7 +34,7 @@ to put all heights in range [0..255] it divided every height by 4+1=5.
 
 
 Pure 64-bit example (the maximum height is considered to be 2^16-1, others are linearly adjusted)
-<img src="./samples/N44E033_32bit_maxbyte_4.png">
+<img src="./samples/N44E033_64bit.png">
 
 This one has no adjustments, it stores 16 bit for each channel, implying that it can store the raw information from the file.
 
@@ -52,7 +52,7 @@ Manually-adjusted 32-bit example (the maximum height is considered to be 2^8-1, 
 
 At this time, we specified maxbyte 5, hence, it will divide every height by 5+1=6 to fit it in range [0..255].
 
-<img src="N44E033_64bit_lightened_maxbyte_5.png">
+<img src="./samples/N44E033_64bit_lightened_maxbyte_5.png">
 This is a 64-bit lightened fragment. To get it, we multiply the heights from the source by (256 / (maxbyte+1)), so that the biggest height
 was about 2^16 - 1.
 
