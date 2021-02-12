@@ -33,7 +33,7 @@ maxbyte_4 means that when looking for the biggest height in the map, it found th
 to put all heights in range [0..255] it divided every height by 4+1=5.
 
 
-Pure 64-bit example (the maximum height is considered to be 2^16-1, others are linearly adjusted)
+Pure 64-bit example
 <img src="./samples/N44E033_64bit.png">
 
 This one has no adjustments, it stores 16 bit for each channel, implying that it can store the raw information from the file.
