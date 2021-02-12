@@ -105,64 +105,148 @@ namespace hgt2png
             return null;
         }
 
+        static string PlainToCoords(int x, int y)
+        {
+            var A = "S";
+            if (x > 90)
+            {
+                x -= 90;
+                A = "N";
+            }
+            else
+                x = 90 - x;
+            var B = "E";
+            if (y > 180)
+            {
+                y -= 180;
+                B = "W";
+            }
+            else
+                y = 180 - y;
+            if (y <= 99)
+                B += "0";
+            if (y <= 9)
+                B += "0";
+            return A + x.ToString() + B + y.ToString();
+        }
+
+        public static IEnumerable<ushort[]> Iterate(ushort[,][] arr)
+        {
+            for (int x = 0; x < arr.GetLength(0); x++)
+                for (int y = 0; y < arr.GetLength(1); y++)
+                    yield return arr[x, y];
+        }
+
+        public static void CopyFragTo(Bitmap dstBmp, Bitmap srcBmp, int xFrom, int yFrom)
+        {
+            using var dst = new SmartBmp(dstBmp, format: dstBmp.PixelFormat);
+            using var src = new SmartBmp(srcBmp, format: srcBmp.PixelFormat);
+            for (int x = 0; x < src.Width; x++)
+                for (int y = 0; y < src.Height; y++)
+                    dst[x + xFrom, y + yFrom] = src[x, y];
+        }
+
+        static void Log(string s)
+        {
+            Console.WriteLine(s);
+        }
+
         static void Main(string[] args)
         {
-            if (args.Length < 2)
+            if (args.Length < 1)
             {
-                Console.WriteLine("Input the path to hgt (example: D:/N44E033.hgt): ");
-                var pathFromLocal = Console.ReadLine();
-                Console.WriteLine("Input the directory and prefix for the final images (example: D:/res): ");
-                var prefixPathToLocal = Console.ReadLine();
-                Console.WriteLine("Input other params");
-                args = new[] { pathFromLocal, prefixPathToLocal }.Concat(Console.ReadLine().Split(" ")).ToArray();
+                Console.WriteLine("Restart the program with valid params");
+                return;
             }
 
             if (args[0].EndsWith(".exe") || args[0].EndsWith(".csproj"))
                 args = args[1..];
 
             var pathFrom = args[0];
-            var prefixPathTo = args[1];
+            var prefixPathTo = args.Length > 1 ? args[1] : Path.Join(pathFrom, "res");
 
-            Console.WriteLine("Starting processing...");
+            Log("Starting processing...");
 
-            var pars = Enumerable.Range(2, args.Length - 2).Select(c => args[c]);
-            var bytes = File.ReadAllBytes(pathFrom);
+            Log($"Looking for files in {pathFrom}");
 
-            var len = (int)Math.Sqrt(bytes.Length / 2);
-            Console.WriteLine($"Fragment size: {len}x{len}px");
+            var matrix = new ushort[180, 360][];
 
-            var ushorts = Bytes2UShort(bytes);
-            
-            Console.WriteLine(InterpolateBrokenDots(ushorts, len) + " broken dots were interpolated");
-            var highestByte = MaxFirstByte(ushorts);
-            Console.WriteLine("Max first byte: " + highestByte);
+            for (int x = 0; x < 180; x++)
+                for (int y = 0; y < 360; y++)
+                {
+                    var name = PlainToCoords(x, y) + ".hgt";
+                    var path = Path.Join(pathFrom, name);
+                    if (File.Exists(path))
+                    {
+                        Log($"Found {name}");
+                        matrix[x, y] = Bytes2UShort(File.ReadAllBytes(path));
+                    }
+                }
 
-            if (FindArgValue(args, "-maxbyte") is { } strMaxByte && int.TryParse(strMaxByte, out var maxByte))
+            var notNulls = Iterate(matrix).Where(c => c is not null);
+
+            if (!notNulls.Any())
             {
-                Console.WriteLine("Manual adjusting mode");
-
-                var goodUserBytes = UShorts2ByteCompress(ushorts, maxByte + 1);
-                var pathUser32 = prefixPathTo + $"_32bit_maxbyte_{maxByte}.png";
-                Hgt2Png(goodUserBytes, len, PixelFormat.Format32bppRgb, byte.MaxValue).Save(pathUser32);
-                Console.WriteLine("32-bit version saved to " + pathUser32);
-
-                var pathUser64 = prefixPathTo + $"_64bit_lightened_maxbyte_{maxByte}.png";
-                Hgt2Png(ushorts.Select(c => (ushort)(c * 256 / (maxByte + 1))).ToArray(), len, PixelFormat.Format64bppArgb, ushort.MaxValue).Save(pathUser64);
-                Console.WriteLine("64-bit lightened version saved to " + pathUser64);
+                Log("No fragments found");
+                return;
             }
-            else
+
+            var any = notNulls.First();
+            var size = (int)Math.Sqrt(any.Length);
+
+            var interpolatedCount = 0;
+
+            foreach (var frag in notNulls)
+                interpolatedCount = InterpolateBrokenDots(frag, size);
+
+            Log($"Interpolated dots in total: {interpolatedCount}");
+
+            if (!(FindArgValue(args, "-maxbyte") is { } strMaxByte) || !int.TryParse(strMaxByte, out var maxByte))
             {
-                Console.WriteLine("Auto adjusting mode");
-
-                var goodBytes = UShorts2ByteCompress(ushorts, highestByte + 1);
-                var path32 = prefixPathTo + $"_32bit_maxbyte_{highestByte}.png";
-                Hgt2Png(goodBytes, len, PixelFormat.Format32bppArgb, byte.MaxValue).Save(path32);
-                Console.WriteLine("32-bit version saved to " + path32);
-
-                var path64 = prefixPathTo + "_64bit.png";
-                Hgt2Png(ushorts, len, PixelFormat.Format64bppArgb, ushort.MaxValue).Save(path64);
-                Console.WriteLine("64-bit version saved to " + path64);
+                maxByte = notNulls.Select(c => MaxFirstByte(c)).Max();
+                Log($"Auto max byte: {maxByte}");
             }
+
+            int minX = 400, minY = 400, maxX = -1, maxY = -1;
+            for (int x = 0; x < 180; x++)
+                for (int y = 0; y < 360; y++)
+                    if (matrix[x, y] is not null)
+                    {
+                        if (x < minX)
+                            minX = x;
+                        if (y < minY)
+                            minY = y;
+                        if (x > maxX)
+                            maxX = x;
+                        if (y > maxY)
+                            maxY = y;
+                    }
+
+            var res32 = new Bitmap((maxY - minY + 1) * size, (maxX - minX + 1) * size, PixelFormat.Format32bppArgb);
+            var res64 = new Bitmap((maxY - minY + 1) * size, (maxX - minX + 1) * size, PixelFormat.Format64bppArgb);
+
+            Log($"Final resolution: {res32.Width}x{res32.Height}");
+
+            for (int x = minX; x <= maxX; x++)
+                for (int y = minY; y <= maxY; y++)
+                    if (matrix[x, y] is { } frag)
+                    {
+                        var bytesFor32 = UShorts2ByteCompress(frag, maxByte + 1);
+                        var bytesFor64 = frag.Select(c => (ushort)(c * 256 / (maxByte + 1))).ToArray();
+                        var frag32 = Hgt2Png(bytesFor32, size, PixelFormat.Format32bppArgb, byte.MaxValue);
+                        var frag64 = Hgt2Png(bytesFor64, size, PixelFormat.Format64bppArgb, ushort.MaxValue);
+                        CopyFragTo(res32, frag32, (maxY - y) * size, (maxX - x) * size);
+                        CopyFragTo(res64, frag64, (maxY - y) * size, (maxX - x) * size);
+                        Log($"Processed {x} {y}");
+                    }
+
+            Log("Saving...");
+
+            var finalPathNoBits = prefixPathTo + PlainToCoords(minX, minY) + "-" + PlainToCoords(maxX, maxY);
+            res32.Save(finalPathNoBits + "_32bit.png");
+            res64.Save(finalPathNoBits + "_64bit.png");
+
+            Log("Done");
         }
     }
 }
