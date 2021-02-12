@@ -12,8 +12,10 @@ cd hgt2png/hgt2png
 dotnet build hgt2png.csproj
 ```
 
-## Usage
+If you are on Windows, you can also check the <a href="https://github.com/WhiteBlackGoose/hgt2png/releases">releases</a> and download an
+executable file.
 
+## Usage
 
 Consider <a href="./samples/hgt">these files</a>.
 
