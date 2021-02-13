@@ -12,7 +12,7 @@ cd hgt2png/hgt2png
 dotnet build hgt2png.csproj
 ```
 
-[![Download the archive with binaries](./extra/button.png | width=150)](https://github.com/WhiteBlackGoose/hgt2png/releases)
+<a href="https://github.com/WhiteBlackGoose/hgt2png/releases"><img src="./extra/button.png" alt="Download the archive with binaries" width="150px"></a>
 
 
 ## Usage
