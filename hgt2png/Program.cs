@@ -105,6 +105,10 @@ Please, input the path to the directory, storing your .hgt files (e. g. N44E033.
                 args = args[1..];
 
             var pathFrom = args[0];
+
+            if (args[0].EndsWith(".hgt") && File.Exists(args[0]))
+                pathFrom = Path.GetDirectoryName(args[0]);
+
             var prefixPathTo = args.Length > 1 ? args[1] : Path.Join(pathFrom, "res");
 
             Log("Starting processing...");
