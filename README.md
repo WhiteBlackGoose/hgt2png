@@ -12,8 +12,8 @@ cd hgt2png/hgt2png
 dotnet build hgt2png.csproj
 ```
 
-If you are on Windows, you can also check the <a href="https://github.com/WhiteBlackGoose/hgt2png/releases">releases</a> and download an
-executable file.
+[![Download the archive with binaries](./extra/button.png | width=150)](https://github.com/WhiteBlackGoose/hgt2png/releases)
+
 
 ## Usage
 

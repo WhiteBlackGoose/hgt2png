@@ -9,82 +9,6 @@ namespace hgt2png
 {
     class Program
     {
-        public static unsafe Bitmap Hgt2Png<T>(T[] hgt, int size, PixelFormat format, T max) where T : unmanaged
-        {
-            var res = new Bitmap(size, size, format);
-            var hgtTriple = new T[hgt.Length * 4];
-            for (int i = 0; i < hgt.Length; i++)
-            {
-                hgtTriple[i * 4 + 0] = hgtTriple[i * 4 + 1] = hgtTriple[i * 4 + 2] = hgt[i];
-                hgtTriple[i * 4 + 3] = max;
-            }
-            fixed (T* dotsBytes = hgtTriple)
-            {
-                var resData = res.LockBits(new Rectangle(0, 0, size, size), ImageLockMode.WriteOnly, format);
-                Buffer.MemoryCopy(dotsBytes, (void*)resData.Scan0, hgtTriple.Length * sizeof(T), hgtTriple.Length * sizeof(T));
-                res.UnlockBits(resData);
-            }
-            return res;
-        }
-
-        public static unsafe ushort[] Bytes2UShort(byte[] bytes)
-        {
-            var ushorts = new ushort[bytes.Length / 2];
-            bytes = bytes.Reverse().ToArray();
-            fixed (void* bytesPtr = bytes, ushortsPtr = ushorts)
-                Buffer.MemoryCopy(bytesPtr, ushortsPtr, bytes.Length, bytes.Length);
-            return ushorts.Reverse().ToArray();
-        }
-
-        private static bool BadDot(ushort dot)
-            => dot / 256 == 128 || dot / 256 == 255;
-
-        public static ushort CollectAround(ushort[] bytes, int currId, int size)
-        {
-            var sum = 0;
-            var count = 0;
-
-            if (currId - 1 >= 0 && !BadDot(bytes[currId - 1]))
-            {
-                count++;
-                sum += bytes[currId - 1];
-            }
-
-            if (currId + 1 < bytes.Length && !BadDot(bytes[currId + 1]))
-            {
-                count++;
-                sum += bytes[currId + 1];
-            }
-
-            if (currId - size >= 0 && !BadDot(bytes[currId - size]))
-            {
-                count++;
-                sum += bytes[currId - size];
-            }
-
-            if (currId + size < bytes.Length && !BadDot(bytes[currId + size]))
-            {
-                count++;
-                sum += bytes[currId + size];
-            }
-
-            if (count == 0)
-                return 0;
-            return (ushort)(sum / count);
-        }
-
-        public static int InterpolateBrokenDots(ushort[] dots, int size)
-        {
-            var interCount = 0;
-            for (int i = 0; i < dots.Length; i++)
-                if (BadDot(dots[i]))
-                {
-                    dots[i] = CollectAround(dots, i, size);
-                    interCount++;
-                }
-            return interCount;
-        }
-
         public static int MaxFirstByte(ushort[] ushorts)
         {
             var m = -1;
@@ -93,9 +17,6 @@ namespace hgt2png
                     m = c / 256;
             return m;
         }
-
-        public static byte[] UShorts2ByteCompress(ushort[] ushorts, int div)
-            => ushorts.Select(c => (byte)(c / div)).ToArray();
 
         public static string FindArgValue(string[] args, string arg)
         {
@@ -200,7 +121,7 @@ Please, input the path to the directory, storing your .hgt files (e. g. N44E033.
                     if (File.Exists(path))
                     {
                         Log($"Found {name}");
-                        matrix[x, y] = Bytes2UShort(File.ReadAllBytes(path));
+                        matrix[x, y] = Convert.Bytes2UShort(File.ReadAllBytes(path));
                     }
                 }
 
@@ -218,7 +139,7 @@ Please, input the path to the directory, storing your .hgt files (e. g. N44E033.
             var interpolatedCount = 0;
 
             foreach (var frag in notNulls)
-                interpolatedCount = InterpolateBrokenDots(frag, size);
+                interpolatedCount = Interpolate.InterpolateBrokenDots(frag, size);
 
             Log($"Interpolated dots in total: {interpolatedCount}");
 
@@ -252,10 +173,10 @@ Please, input the path to the directory, storing your .hgt files (e. g. N44E033.
                 for (int y = minY; y <= maxY; y++)
                     if (matrix[x, y] is { } frag)
                     {
-                        var bytesFor32 = UShorts2ByteCompress(frag, maxByte + 1);
+                        var bytesFor32 = Convert.UShorts2ByteCompress(frag, maxByte + 1);
                         var bytesFor64 = frag.Select(c => (ushort)(c * 256 / (maxByte + 1))).ToArray();
-                        var frag32 = Hgt2Png(bytesFor32, size, PixelFormat.Format32bppArgb, byte.MaxValue);
-                        var frag64 = Hgt2Png(bytesFor64, size, PixelFormat.Format64bppArgb, ushort.MaxValue);
+                        var frag32 = Hgt2PngConverter.Hgt2Png(bytesFor32, size, PixelFormat.Format32bppArgb, byte.MaxValue);
+                        var frag64 = Hgt2PngConverter.Hgt2Png(bytesFor64, size, PixelFormat.Format64bppArgb, ushort.MaxValue);
                         CopyFragTo<(byte, byte, byte, byte)>(res32, frag32, (maxY - y) * size, (maxX - x) * size);
                         CopyFragTo<(ushort, ushort, ushort, ushort)>(res64, frag64, (maxY - y) * size, (maxX - x) * size);
                         Log($"Processed {x} {y}");
