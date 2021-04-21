@@ -48,6 +48,8 @@ namespace hgt2png
                 B += "0";
             if (y <= 9)
                 B += "0";
+            if (x < 10)
+                A += "0";
             return A + x.ToString() + B + y.ToString();
         }
 
